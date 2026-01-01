@@ -41,44 +41,25 @@ yoto status
 yoto playlist list
 yoto playlist show <cardId>
 yoto playlist create "My Playlist" --description "Description" --author "Author"
-yoto playlist edit <cardId> --title "New Title"
+yoto playlist update <cardId> --title "New Title"
 yoto playlist delete <cardId>
 ```
 
-### Chapters
+### Entries
+
+Entries are the main way to add content to playlists. Each entry creates a chapter with an audio track.
 
 ```bash
-# Add chapter (with optional audio file and icon)
-yoto chapter add <cardId> "Chapter Title"
-yoto chapter add <cardId> "Chapter Title" --file ./audio.mp3
-yoto chapter add <cardId> "Chapter Title" --file ./audio.mp3 --icon ./cover.png
+# Add entry (chapter + track)
+yoto entry add <cardId> "Song Title" --file ./audio.mp3
+yoto entry add <cardId> "Song Title" --file ./audio.mp3 --icon ./cover.png
 
-# Edit and delete
-yoto chapter edit <cardId> <chapterIdx> --title "New Title" --icon ./icon.png
-yoto chapter delete <cardId> <chapterIdx>
-```
+# Update entry (updates both chapter and track)
+yoto entry update <cardId> <entryIdx> --title "New Title"
+yoto entry update <cardId> <entryIdx> --icon ./cover.png
 
-### Tracks
-
-```bash
-# Add track (accepts file path, yoto:# hash, or URL)
-yoto track add <cardId> <chapterIdx> "Track Title" ./audio.mp3
-yoto track add <cardId> <chapterIdx> "Track Title" "yoto:#abc123"
-yoto track add <cardId> <chapterIdx> "Track Title" ./audio.mp3 --icon ./cover.png
-
-# Edit track
-yoto track edit <cardId> <chapterIdx> <trackIdx> --title "New Title"
-yoto track edit <cardId> <chapterIdx> <trackIdx> --icon ./cover.png
-yoto track edit <cardId> <chapterIdx> <trackIdx> --on-end repeat  # loop track
-yoto track edit <cardId> <chapterIdx> <trackIdx> --on-end stop    # pause after track
-
-# Delete track
-yoto track delete <cardId> <chapterIdx> <trackIdx>
-
-# Upload audio without adding to playlist
-yoto track upload ./audio.mp3
-yoto track upload ./audio.mp3 --no-wait
-yoto track status <uploadId>
+# Delete entry
+yoto entry delete <cardId> <entryIdx>
 ```
 
 ### Icons
@@ -109,18 +90,16 @@ Run `yoto --help` for full command list.
 
 The CLI automatically detects whether you're providing a file path or an existing ID:
 
-**Audio sources** (for `track add`):
+**Audio files** (for `--file` option):
 - `./song.mp3` or `/path/to/audio.m4a` → uploads and transcodes automatically
-- `yoto:#abc123` → uses existing uploaded audio
-- `https://...` → uses external URL
 
 **Icons** (for `--icon` option):
 - `./cover.png` or `/path/to/icon.jpg` → uploads automatically
 - `abc123def456` → uses existing mediaId
 
-## Playlist Structure
+## Advanced: Chapters and Tracks
 
-Yoto playlists have a hierarchical structure:
+Under the hood, Yoto playlists have a hierarchical structure:
 
 ```
 Playlist (Card)
@@ -137,7 +116,40 @@ Playlist (Card)
 - **Chapter**: Corresponds to button presses on the Yoto player
 - **Track**: An audio file. Tracks within a chapter play sequentially
 
-**Quick add**: Use `yoto chapter add <cardId> "Title" --file ./audio.mp3` to create a chapter with a track in one command.
+The `entry` command treats chapter + track as one unit (like the Yoto app). For advanced use cases where you need to work with chapters and tracks separately:
+
+### Chapter Commands
+
+```bash
+yoto chapter add <cardId> "Chapter Title"              # Empty chapter
+yoto chapter add <cardId> "Chapter Title" --icon ./icon.png
+yoto chapter update <cardId> <chapterIdx> --title "New Title"
+yoto chapter update <cardId> <chapterIdx> --icon ./icon.png
+yoto chapter delete <cardId> <chapterIdx>
+```
+
+### Track Commands
+
+```bash
+# Add track to existing chapter (accepts file path, yoto:# hash, or URL)
+yoto track add <cardId> <chapterIdx> "Track Title" ./audio.mp3
+yoto track add <cardId> <chapterIdx> "Track Title" "yoto:#abc123"
+yoto track add <cardId> <chapterIdx> "Track Title" ./audio.mp3 --icon ./cover.png
+
+# Update track
+yoto track update <cardId> <chapterIdx> <trackIdx> --title "New Title"
+yoto track update <cardId> <chapterIdx> <trackIdx> --icon ./cover.png
+yoto track update <cardId> <chapterIdx> <trackIdx> --on-end repeat  # loop track
+yoto track update <cardId> <chapterIdx> <trackIdx> --on-end stop    # pause after track
+
+# Delete track
+yoto track delete <cardId> <chapterIdx> <trackIdx>
+
+# Upload audio without adding to playlist
+yoto track upload ./audio.mp3
+yoto track upload ./audio.mp3 --no-wait
+yoto track status <uploadId>
+```
 
 ## Development
 

@@ -47,7 +47,7 @@ Examples:
     );
 
   track
-    .command("edit <cardId> <chapterIdx> <trackIdx>")
+    .command("update <cardId> <chapterIdx> <trackIdx>")
     .description("Update a track's properties (title, icon, URL, playback behavior)")
     .option("--title <title>", "Update track title")
     .option("--icon <icon>", "Update track icon (file path, mediaId, or yoto:#mediaId)")
@@ -64,9 +64,9 @@ Arguments:
 The --icon option accepts a file path (auto-uploads) or existing mediaId.
 
 Examples:
-  $ yoto track edit 5ukMR 0 0 --title "New Title"
-  $ yoto track edit 5ukMR 0 0 --icon ./cover.png
-  $ yoto track edit 5ukMR 0 0 --on-end repeat
+  $ yoto track update 5ukMR 0 0 --title "New Title"
+  $ yoto track update 5ukMR 0 0 --icon ./cover.png
+  $ yoto track update 5ukMR 0 0 --on-end repeat
 `
     )
     .action((cardId, chapterIdx, trackIdx, options) =>

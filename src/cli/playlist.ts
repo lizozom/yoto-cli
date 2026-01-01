@@ -71,8 +71,8 @@ Examples:
     );
 
   playlist
-    .command("edit <cardId>")
-    .description("Edit playlist properties (title, description, author)")
+    .command("update <cardId>")
+    .description("Update playlist properties (title, description, author)")
     .option("--title <title>", "Update playlist title")
     .option("--description <desc>", "Update playlist description")
     .option("--author <author>", "Update playlist author")
@@ -84,9 +84,9 @@ Arguments:
   cardId    The playlist card ID
 
 Examples:
-  $ yoto playlist edit 5ukMR --title "New Title"
-  $ yoto playlist edit 5ukMR --description "Updated description"
-  $ yoto playlist edit 5ukMR --title "Stories" --author "Dad"
+  $ yoto playlist update 5ukMR --title "New Title"
+  $ yoto playlist update 5ukMR --description "Updated description"
+  $ yoto playlist update 5ukMR --title "Stories" --author "Dad"
 `
     )
     .action((cardId, options) =>

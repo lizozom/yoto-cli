@@ -12,9 +12,8 @@ export function registerChapterCommands(program: Command): void {
 
   chapter
     .command("add <cardId> <title>")
-    .description("Add a new chapter to a playlist")
+    .description("Add an empty chapter to a playlist (use 'entry add' for chapter with audio)")
     .option("--icon <icon>", "Set chapter icon (file path, mediaId, or yoto:#mediaId)")
-    .option("--file <path>", "Audio file to upload and add as a track")
     .option("--json", "Output as JSON")
     .addHelpText(
       "after",
@@ -23,21 +22,20 @@ Arguments:
   cardId    The playlist card ID
   title     The chapter title
 
-The --icon and --file options accept file paths (auto-uploads) or existing IDs.
+This creates an empty chapter without tracks. Use 'yoto entry add' to create
+a chapter with an audio track in one step.
 
 Examples:
   $ yoto chapter add 5ukMR "Chapter 1"
   $ yoto chapter add 5ukMR "Morning Songs" --icon ./cover.png
-  $ yoto chapter add 5ukMR "Bamidbar" --file ./song.mp3 --icon ./icon.jpg
-  $ yoto chapter add 5ukMR "Story" --icon abc123def456
 `
     )
     .action((cardId, title, options) =>
-      addChapter(cardId, title, { icon: options.icon, file: options.file, json: options.json })
+      addChapter(cardId, title, { icon: options.icon, json: options.json })
     );
 
   chapter
-    .command("edit <cardId> <chapterIdx>")
+    .command("update <cardId> <chapterIdx>")
     .description("Update a chapter's title or icon")
     .option("--title <title>", "Update chapter title")
     .option("--icon <icon>", "Update chapter icon (file path, mediaId, or yoto:#mediaId)")
@@ -51,9 +49,9 @@ Arguments:
 The --icon option accepts a file path (auto-uploads) or existing mediaId.
 
 Examples:
-  $ yoto chapter edit 5ukMR 0 --title "New Chapter Title"
-  $ yoto chapter edit 5ukMR 1 --icon ./cover.png
-  $ yoto chapter edit 5ukMR 1 --icon abc123def456
+  $ yoto chapter update 5ukMR 0 --title "New Chapter Title"
+  $ yoto chapter update 5ukMR 1 --icon ./cover.png
+  $ yoto chapter update 5ukMR 1 --icon abc123def456
 `
     )
     .action((cardId, chapterIdx, options) =>

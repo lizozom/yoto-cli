@@ -139,22 +139,8 @@ export async function deletePlaylist(cardId: string): Promise<void> {
 export async function addChapter(
   cardId: string,
   title: string,
-  options: { icon?: string; file?: string; json?: boolean }
+  options: { icon?: string; json?: boolean }
 ): Promise<void> {
-  // If file is provided, upload and transcode it first
-  let trackUrl: string | undefined;
-  let duration: number | undefined;
-
-  if (options.file) {
-    const result = await uploadAndTranscode(options.file, { wait: true });
-    if (!result.trackUrl) {
-      error(`Failed to get track URL from upload`);
-      process.exit(1);
-    }
-    trackUrl = result.trackUrl;
-    duration = result.duration;
-  }
-
   // Resolve icon (upload if file path, use directly if hash)
   const DEFAULT_ICON = "aUm9i3ex3qqAMYBv-i-O-pYMKuMJGICtR3Vhf289u2Q";
   const mediaId = options.icon ? await resolveIcon(options.icon) : DEFAULT_ICON;
@@ -166,31 +152,18 @@ export async function addChapter(
 
   // Generate a short key (API requires ≤20 chars)
   const nextIndex = card.content.chapters.length;
-
-  const tracks: Array<{
-    key: string;
-    title: string;
-    trackUrl: string;
-    type: string;
-    duration?: number;
-  }> = [];
-
-  if (trackUrl) {
-    tracks.push({
-      key: "01",
-      title,
-      trackUrl,
-      type: "audio",
-      duration,
-    });
-  }
+  const overlayLabel = String(nextIndex + 1); // 1-based for display
 
   const newChapter = {
     key: String(nextIndex).padStart(2, "0"),
     title,
-    icon: mediaId,
+    tracks: [],
+    overlayLabel,
     display: { icon16x16: iconRef },
-    tracks,
+    availableFrom: null,
+    ambient: null,
+    defaultTrackDisplay: null,
+    defaultTrackAmbient: null,
   };
 
   card.content.chapters.push(newChapter);
@@ -206,20 +179,11 @@ export async function addChapter(
       cardId,
       chapterIndex: nextIndex,
       title,
-      trackUrl,
-      duration,
     });
     return;
   }
 
-  if (trackUrl) {
-    success(`Added chapter "${title}" with track to playlist`);
-    if (duration) {
-      info(`Duration: ${formatDuration(duration)}`);
-    }
-  } else {
-    success(`Added chapter "${title}" to playlist`);
-  }
+  success(`Added chapter "${title}" to playlist`);
 }
 
 export async function addTrack(

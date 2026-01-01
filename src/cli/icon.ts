@@ -44,7 +44,7 @@ Examples:
 Arguments:
   file    Path to image file (PNG, JPEG, or GIF)
 
-The uploaded icon's mediaId can be used with 'track edit --icon' or 'chapter edit --icon'.
+The uploaded icon's mediaId can be used with 'track update --icon' or 'chapter update --icon'.
 
 By default, images are automatically resized to 16x16 pixels.
 Use --no-convert if your image is already 16x16 PNG.
