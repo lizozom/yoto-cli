@@ -1,0 +1,102 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.x
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Type check
+        run: bun run typecheck
+
+      - name: Build all platforms
+        run: bun run build:all
+
+      - name: Make binaries executable
+        run: chmod +x dist/yoto-*
+
+      - name: Create tarballs
+        run: |
+          cd dist
+          for f in yoto-*; do
+            if [[ "$f" != *.exe ]]; then
+              tar -czvf "${f}.tar.gz" "$f"
+            fi
+          done
+          # Zip for Windows
+          zip yoto-windows-x64.zip yoto-windows-x64.exe
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries
+          path: |
+            dist/*.tar.gz
+            dist/*.zip
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: binaries
+          path: dist
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/yoto-linux-x64.tar.gz
+            dist/yoto-linux-arm64.tar.gz
+            dist/yoto-darwin-x64.tar.gz
+            dist/yoto-darwin-arm64.tar.gz
+            dist/yoto-windows-x64.zip
+          generate_release_notes: true
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.x
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build for npm
+        run: bun run build
+
+      - name: Setup Node for npm publish
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@thebestmoshe'
+
+      - name: Publish to GitHub Packages
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

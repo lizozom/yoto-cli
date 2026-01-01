@@ -4,12 +4,27 @@ CLI for interacting with the Yoto API. Manage playlists, tracks, icons, and devi
 
 ## Installation
 
+### Quick Install (Recommended)
+
 ```bash
-bun install
-bun run build
+curl -fsSL https://raw.githubusercontent.com/TheBestMoshe/yoto-cli/main/install.sh | bash
 ```
 
-The compiled binary will be at `./dist/yoto`.
+This installs to `~/.local/bin`. Make sure it's in your PATH:
+
+```bash
+export PATH="$PATH:$HOME/.local/bin"
+```
+
+### Manual Download
+
+Download the latest tarball for your platform from [GitHub Releases](https://github.com/TheBestMoshe/yoto-cli/releases) and extract it.
+
+### Install from GitHub Package Registry
+
+```bash
+npm install -g @thebestmoshe/yoto-cli --registry=https://npm.pkg.github.com
+```
 
 ## Usage
 
@@ -48,3 +63,14 @@ bun dev <command>        # Run without compiling
 bun run typecheck        # Type check
 bun run build            # Build binary
 ```
+
+## Build from Source
+
+```bash
+git clone https://github.com/TheBestMoshe/yoto-cli.git
+cd yoto-cli
+bun install
+bun run build
+```
+
+The compiled binary will be at `./dist/yoto`.
