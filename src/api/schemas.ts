@@ -41,7 +41,7 @@ const TrackEventsSchema = z.object({
 export const TrackSchema = z.object({
   key: z.string(),
   title: z.string(),
-  duration: z.number().optional(),
+  duration: z.number().optional().nullable(),
   format: z.string().optional(),
   channels: z.string().optional(), // e.g. "stereo"
   type: z.string().optional(),
@@ -49,7 +49,7 @@ export const TrackSchema = z.object({
   icon: z.string().optional(),
   overlayLabel: z.string().optional(),
   display: DisplaySchema,
-  fileSize: z.number().optional(),
+  fileSize: z.number().optional().nullable(),
   ambient: z.unknown().optional().nullable(),
   events: TrackEventsSchema,
 });

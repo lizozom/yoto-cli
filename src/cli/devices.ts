@@ -6,64 +6,117 @@ import {
 } from "../commands/devices.ts";
 
 export function registerDeviceCommands(program: Command): void {
-  program
-    .command("devices")
+  const device = program
+    .command("device")
+    .description("Manage Yoto devices");
+
+  device
+    .command("list")
     .description("List your Yoto devices")
     .option("--json", "Output as JSON")
     .addHelpText(
       "after",
       `
 Examples:
-  $ yoto devices
-  $ yoto devices --json
+  $ yoto device list
+  $ yoto device list --json
 `
     )
     .action((options) => listDevices({ json: options.json }));
 
-  program
-    .command("device <deviceId>")
+  device
+    .command("show <deviceId>")
     .description("Get device status (playback state, volume, battery)")
     .option("--json", "Output as JSON")
     .addHelpText(
       "after",
       `
 Arguments:
-  deviceId    The device ID (from 'yoto devices')
+  deviceId    The device ID (from 'yoto device list')
 
 Examples:
-  $ yoto device Y12345678
-  $ yoto device Y12345678 --json
+  $ yoto device show Y12345678
+  $ yoto device show Y12345678 --json
 `
     )
     .action((deviceId, options) =>
       getDeviceStatus(deviceId, { json: options.json })
     );
 
-  program
-    .command("device:cmd <deviceId> <command> [value]")
-    .description("Send a command to a Yoto device")
+  device
+    .command("play <deviceId>")
+    .description("Start/resume playback")
+    .addHelpText(
+      "after",
+      `
+Examples:
+  $ yoto device play Y12345678
+`
+    )
+    .action((deviceId) => sendCommand(deviceId, "play"));
+
+  device
+    .command("pause <deviceId>")
+    .description("Pause playback")
+    .addHelpText(
+      "after",
+      `
+Examples:
+  $ yoto device pause Y12345678
+`
+    )
+    .action((deviceId) => sendCommand(deviceId, "pause"));
+
+  device
+    .command("stop <deviceId>")
+    .description("Stop playback")
+    .addHelpText(
+      "after",
+      `
+Examples:
+  $ yoto device stop Y12345678
+`
+    )
+    .action((deviceId) => sendCommand(deviceId, "stop"));
+
+  device
+    .command("next <deviceId>")
+    .description("Skip to next track")
+    .addHelpText(
+      "after",
+      `
+Examples:
+  $ yoto device next Y12345678
+`
+    )
+    .action((deviceId) => sendCommand(deviceId, "next"));
+
+  device
+    .command("previous <deviceId>")
+    .description("Go to previous track")
+    .addHelpText(
+      "after",
+      `
+Examples:
+  $ yoto device previous Y12345678
+`
+    )
+    .action((deviceId) => sendCommand(deviceId, "previous"));
+
+  device
+    .command("volume <deviceId> <level>")
+    .description("Set volume level (0-100)")
     .addHelpText(
       "after",
       `
 Arguments:
-  deviceId    The device ID (from 'yoto devices')
-  command     Command to send: play, pause, stop, next, previous, volume
-  value       Value for command (required for 'volume': 0-100)
-
-Commands:
-  play        Start/resume playback
-  pause       Pause playback
-  stop        Stop playback
-  next        Skip to next track
-  previous    Go to previous track
-  volume      Set volume level (requires value 0-100)
+  deviceId    The device ID
+  level       Volume level (0-100)
 
 Examples:
-  $ yoto device:cmd Y12345678 play
-  $ yoto device:cmd Y12345678 pause
-  $ yoto device:cmd Y12345678 volume 50
-  $ yoto device:cmd Y12345678 next
+  $ yoto device volume Y12345678 50
+  $ yoto device volume Y12345678 0
 `
     )
-    .action(sendCommand);
+    .action((deviceId, level) => sendCommand(deviceId, "volume", level));
 }

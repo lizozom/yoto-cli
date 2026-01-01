@@ -2,8 +2,10 @@
 
 import { Command } from "commander";
 import { registerAuthCommands } from "./cli/auth.ts";
-import { registerPlaylistCommands } from "./cli/playlists.ts";
-import { registerIconCommands } from "./cli/icons.ts";
+import { registerPlaylistCommands } from "./cli/playlist.ts";
+import { registerChapterCommands } from "./cli/chapter.ts";
+import { registerTrackCommands } from "./cli/track.ts";
+import { registerIconCommands } from "./cli/icon.ts";
 import { registerDeviceCommands } from "./cli/devices.ts";
 import { error } from "./utils/output.ts";
 
@@ -15,9 +17,11 @@ program
   .version("0.1.0");
 
 registerAuthCommands(program);
-registerPlaylistCommands(program);
-registerIconCommands(program);
 registerDeviceCommands(program);
+registerPlaylistCommands(program);
+registerChapterCommands(program);
+registerTrackCommands(program);
+registerIconCommands(program);
 
 program.parseAsync(process.argv).catch((err) => {
   error(err instanceof Error ? err.message : String(err));

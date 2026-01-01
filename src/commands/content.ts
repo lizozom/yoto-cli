@@ -1,7 +1,50 @@
 import { readFile } from "fs/promises";
 import { basename } from "path";
+import { stat } from "fs/promises";
 import { getAuthenticatedClient } from "./auth.ts";
 import { success, error, info, table, json } from "../utils/output.ts";
+
+// Smart icon resolver: accepts file path or mediaId/hash
+async function resolveIcon(icon: string): Promise<string> {
+  // If already a yoto:# reference, extract the mediaId
+  if (icon.startsWith("yoto:#")) {
+    return icon.slice(6); // Remove "yoto:#" prefix
+  }
+
+  // Check if it looks like a file path
+  const isFilePath = icon.startsWith("./") ||
+                     icon.startsWith("../") ||
+                     icon.startsWith("/") ||
+                     /\.(png|jpg|jpeg|gif)$/i.test(icon);
+
+  if (isFilePath) {
+    // Verify file exists
+    try {
+      await stat(icon);
+    } catch {
+      error(`Icon file not found: ${icon}`);
+      process.exit(1);
+    }
+
+    // Upload the icon
+    info(`Uploading icon...`);
+    const client = await getAuthenticatedClient();
+    const file = await readFile(icon);
+    const filename = basename(icon);
+
+    const response = await client.uploadIcon(file, {
+      filename,
+      autoConvert: true,
+    });
+
+    const mediaId = response.displayIcon.mediaId;
+    success(`Icon uploaded`);
+    return mediaId;
+  }
+
+  // Assume it's already a mediaId
+  return icon;
+}
 
 export async function listPlaylists(options: { json?: boolean }): Promise<void> {
   const client = await getAuthenticatedClient();
@@ -96,8 +139,27 @@ export async function deletePlaylist(cardId: string): Promise<void> {
 export async function addChapter(
   cardId: string,
   title: string,
-  options: { icon?: string }
+  options: { icon?: string; file?: string; json?: boolean }
 ): Promise<void> {
+  // If file is provided, upload and transcode it first
+  let trackUrl: string | undefined;
+  let duration: number | undefined;
+
+  if (options.file) {
+    const result = await uploadAndTranscode(options.file, { wait: true });
+    if (!result.trackUrl) {
+      error(`Failed to get track URL from upload`);
+      process.exit(1);
+    }
+    trackUrl = result.trackUrl;
+    duration = result.duration;
+  }
+
+  // Resolve icon (upload if file path, use directly if hash)
+  const DEFAULT_ICON = "aUm9i3ex3qqAMYBv-i-O-pYMKuMJGICtR3Vhf289u2Q";
+  const mediaId = options.icon ? await resolveIcon(options.icon) : DEFAULT_ICON;
+  const iconRef = `yoto:#${mediaId}`;
+
   const client = await getAuthenticatedClient();
   const existing = await client.getContent(cardId);
   const card = existing.card;
@@ -105,16 +167,30 @@ export async function addChapter(
   // Generate a short key (API requires ≤20 chars)
   const nextIndex = card.content.chapters.length;
 
-  // Default icon (from Yoto's standard set)
-  const DEFAULT_ICON = "yoto:#aUm9i3ex3qqAMYBv-i-O-pYMKuMJGICtR3Vhf289u2Q";
-  const displayIcon = options.icon || DEFAULT_ICON;
+  const tracks: Array<{
+    key: string;
+    title: string;
+    trackUrl: string;
+    type: string;
+    duration?: number;
+  }> = [];
+
+  if (trackUrl) {
+    tracks.push({
+      key: "01",
+      title,
+      trackUrl,
+      type: "audio",
+      duration,
+    });
+  }
 
   const newChapter = {
     key: String(nextIndex).padStart(2, "0"),
     title,
-    icon: options.icon,
-    display: { icon16x16: displayIcon },
-    tracks: [],
+    icon: mediaId,
+    display: { icon16x16: iconRef },
+    tracks,
   };
 
   card.content.chapters.push(newChapter);
@@ -125,7 +201,25 @@ export async function addChapter(
     metadata: card.metadata,
   });
 
-  success(`Added chapter "${title}" to playlist`);
+  if (options.json) {
+    json({
+      cardId,
+      chapterIndex: nextIndex,
+      title,
+      trackUrl,
+      duration,
+    });
+    return;
+  }
+
+  if (trackUrl) {
+    success(`Added chapter "${title}" with track to playlist`);
+    if (duration) {
+      info(`Duration: ${formatDuration(duration)}`);
+    }
+  } else {
+    success(`Added chapter "${title}" to playlist`);
+  }
 }
 
 export async function addTrack(
@@ -135,6 +229,9 @@ export async function addTrack(
   trackUrl: string,
   options: { icon?: string; duration?: number }
 ): Promise<void> {
+  // Resolve icon if provided
+  const mediaId = options.icon ? await resolveIcon(options.icon) : undefined;
+
   const client = await getAuthenticatedClient();
   const existing = await client.getContent(cardId);
   const card = existing.card;
@@ -152,8 +249,9 @@ export async function addTrack(
     title,
     trackUrl,
     type: "audio",
-    icon: options.icon,
     duration: options.duration,
+    icon: mediaId,
+    display: mediaId ? { icon16x16: `yoto:#${mediaId}` } : undefined,
   };
 
   chapter.tracks.push(newTrack);
@@ -165,6 +263,73 @@ export async function addTrack(
   });
 
   success(`Added track "${title}" to chapter "${chapter.title}"`);
+}
+
+// Detect if source is a file path, URL, or yoto:# hash
+function isFilePath(source: string): boolean {
+  // Check for common file path patterns
+  if (source.startsWith("./") || source.startsWith("../") || source.startsWith("/")) {
+    return true;
+  }
+  // Check for file extensions (audio files)
+  const audioExtensions = /\.(mp3|m4a|aac|flac|wav|ogg|wma|opus)$/i;
+  if (audioExtensions.test(source) && !source.startsWith("http")) {
+    return true;
+  }
+  return false;
+}
+
+function isYotoHash(source: string): boolean {
+  return source.startsWith("yoto:#");
+}
+
+function isUrl(source: string): boolean {
+  return source.startsWith("http://") || source.startsWith("https://");
+}
+
+export async function addTrackSmart(
+  cardId: string,
+  chapterIndex: number,
+  title: string,
+  source: string,
+  options: { icon?: string; duration?: number }
+): Promise<void> {
+  let trackUrl = source;
+  let duration = options.duration;
+
+  if (isFilePath(source)) {
+    // Upload and transcode the file first
+    info(`Uploading ${source}...`);
+    const result = await uploadAndTranscode(source, { wait: true });
+    if (!result.trackUrl) {
+      error(`Failed to get track URL from upload`);
+      process.exit(1);
+    }
+    trackUrl = result.trackUrl;
+    duration = duration ?? result.duration;
+  } else if (isYotoHash(source)) {
+    // Already a yoto:# hash, use directly
+    trackUrl = source;
+  } else if (isUrl(source)) {
+    // External URL, use directly
+    trackUrl = source;
+  } else {
+    // Assume it's a file path without leading ./
+    info(`Uploading ${source}...`);
+    const result = await uploadAndTranscode(source, { wait: true });
+    if (!result.trackUrl) {
+      error(`Failed to get track URL from upload`);
+      process.exit(1);
+    }
+    trackUrl = result.trackUrl;
+    duration = duration ?? result.duration;
+  }
+
+  // Now add the track with the resolved URL
+  await addTrack(cardId, chapterIndex, title, trackUrl, {
+    icon: options.icon,
+    duration,
+  });
 }
 
 export async function updateTrack(
@@ -191,8 +356,8 @@ export async function updateTrack(
 
   if (options.title) track.title = options.title;
   if (options.icon) {
-    const iconRef = options.icon.startsWith("yoto:#") ? options.icon : `yoto:#${options.icon}`;
-    track.display = { ...track.display, icon16x16: iconRef };
+    const mediaId = await resolveIcon(options.icon);
+    track.display = { ...track.display, icon16x16: `yoto:#${mediaId}` };
   }
   if (options.url) track.trackUrl = options.url;
   if (options.onEnd !== undefined) {
@@ -314,7 +479,11 @@ export async function updateChapter(
   }
 
   if (options.title) chapter.title = options.title;
-  if (options.icon) chapter.icon = options.icon;
+  if (options.icon) {
+    const mediaId = await resolveIcon(options.icon);
+    chapter.icon = mediaId;
+    chapter.display = { ...chapter.display, icon16x16: `yoto:#${mediaId}` };
+  }
 
   await client.updateContent(cardId, {
     title: card.title,
@@ -398,72 +567,6 @@ function formatDuration(seconds: number): string {
   return `${Math.floor(seconds / 60)}:${String(Math.round(seconds % 60)).padStart(2, "0")}`;
 }
 
-const DEFAULT_ICON = "yoto:#aUm9i3ex3qqAMYBv-i-O-pYMKuMJGICtR3Vhf289u2Q";
-
-export async function importTrack(
-  cardId: string,
-  title: string,
-  filePath: string,
-  options: { icon?: string; json?: boolean }
-): Promise<void> {
-  // Upload and wait for transcoding
-  const result = await uploadAndTranscode(filePath, { wait: true });
-
-  if (!result.trackUrl) {
-    error(`Failed to get track URL`);
-    process.exit(1);
-  }
-
-  // Get current playlist to determine chapter index
-  const client = await getAuthenticatedClient();
-  const existing = await client.getContent(cardId);
-  const card = existing.card;
-  const chapterIndex = card.content.chapters.length;
-
-  // Create chapter with track
-  const displayIcon = options.icon || DEFAULT_ICON;
-
-  const newChapter = {
-    key: String(chapterIndex).padStart(2, "0"),
-    title,
-    icon: options.icon,
-    display: { icon16x16: displayIcon },
-    tracks: [
-      {
-        key: "01",
-        title,
-        trackUrl: result.trackUrl,
-        type: "audio",
-        duration: result.duration,
-      },
-    ],
-  };
-
-  card.content.chapters.push(newChapter);
-
-  await client.updateContent(cardId, {
-    title: card.title,
-    content: card.content,
-    metadata: card.metadata,
-  });
-
-  if (options.json) {
-    json({
-      cardId,
-      chapterIndex,
-      title,
-      trackUrl: result.trackUrl,
-      duration: result.duration,
-    });
-    return;
-  }
-
-  success(`Added "${title}" to playlist`);
-  if (result.duration) {
-    info(`Duration: ${formatDuration(result.duration)}`);
-  }
-}
-
 export async function uploadAudio(
   filePath: string,
   options: { json?: boolean; wait?: boolean }
@@ -472,7 +575,7 @@ export async function uploadAudio(
 
   if (options.wait === false) {
     info(`Upload ID: ${result.uploadId}`);
-    info(`Use 'yoto track:transcode-status ${result.uploadId}' to check status`);
+    info(`Use 'yoto track status ${result.uploadId}' to check status`);
     return;
   }
 
@@ -490,7 +593,7 @@ export async function uploadAudio(
   if (result.duration) {
     info(`Duration: ${formatDuration(result.duration)}`);
   }
-  info(`Use with: yoto track:add <cardId> <chapterIdx> "Title" "${result.trackUrl}"`);
+  info(`Use with: yoto track add <cardId> <chapterIdx> "Title" "${result.trackUrl}"`);
 }
 
 export async function getTranscodeStatus(
@@ -523,7 +626,7 @@ export async function getTranscodeStatus(
         if (duration) {
           info(`Duration: ${Math.floor(duration / 60)}:${String(Math.round(duration % 60)).padStart(2, "0")}`);
         }
-        info(`Use with: yoto track:add <cardId> <chapterIdx> "Title" "${trackUrl}"`);
+        info(`Use with: yoto track add <cardId> <chapterIdx> "Title" "${trackUrl}"`);
         return;
       }
 
@@ -560,7 +663,7 @@ export async function getTranscodeStatus(
     if (duration) {
       info(`Duration: ${Math.floor(duration / 60)}:${String(Math.round(duration % 60)).padStart(2, "0")}`);
     }
-    info(`Use with: yoto track:add <cardId> <chapterIdx> "Title" "${trackUrl}"`);
+    info(`Use with: yoto track add <cardId> <chapterIdx> "Title" "${trackUrl}"`);
   } else {
     info(`Status: ${phase}${percent !== undefined ? ` (${percent}%)` : ""}`);
     info(`Run with --wait to poll until complete`);
