@@ -1,31 +1,45 @@
 {
-  "name": "@thebestmoshe/yoto-cli",
-  "version": "0.2.0",
-  "description": "CLI for interacting with the Yoto API",
+  "name": "@lizozom/yoto",
+  "version": "0.2.1",
+  "description": "CLI and library for interacting with the Yoto API",
   "type": "module",
+  "main": "./dist/lib/index.js",
+  "module": "./dist/lib/index.js",
+  "types": "./dist/lib/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/lib/index.js",
+      "require": "./dist/lib/index.js",
+      "types": "./dist/lib/index.d.ts"
+    }
+  },
   "bin": {
     "yoto": "./dist/yoto"
   },
+  "files": [
+    "dist",
+    "src"
+  ],
   "scripts": {
     "dev": "bun run src/cli.ts",
-    "build": "bun build src/cli.ts --compile --outfile dist/yoto",
+    "build": "bun run build:cli && bun run build:lib",
+    "build:cli": "bun build src/cli.ts --compile --outfile dist/yoto",
+    "build:lib": "bun build src/index.ts --outdir dist/lib --target node && tsc -p tsconfig.build.json",
     "build:linux-x64": "bun build src/cli.ts --compile --target=bun-linux-x64 --outfile dist/yoto-linux-x64",
     "build:linux-arm64": "bun build src/cli.ts --compile --target=bun-linux-arm64 --outfile dist/yoto-linux-arm64",
     "build:darwin-x64": "bun build src/cli.ts --compile --target=bun-darwin-x64 --outfile dist/yoto-darwin-x64",
     "build:darwin-arm64": "bun build src/cli.ts --compile --target=bun-darwin-arm64 --outfile dist/yoto-darwin-arm64",
     "build:windows-x64": "bun build src/cli.ts --compile --target=bun-windows-x64 --outfile dist/yoto-windows-x64.exe",
     "build:all": "bun run build:linux-x64 && bun run build:linux-arm64 && bun run build:darwin-x64 && bun run build:darwin-arm64 && bun run build:windows-x64",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "bun run build"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/TheBestMoshe/yoto-cli.git"
+    "url": "https://github.com/lizozom/yoto-cli.git"
   },
   "author": "TheBestMoshe",
   "license": "MIT",
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
-  },
   "devDependencies": {
     "@types/bun": "latest",
     "typescript": "^5"
