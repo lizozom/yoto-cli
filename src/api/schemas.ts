@@ -178,21 +178,17 @@ export const TranscodedAudioResponseSchema = z.object({
     uploadId: z.string(),
     uploadSha256: z.string(),
     progress: z.object({
-      phase: z.string(), // "queued", "processing", "complete"
+      phase: z.string(),
       percent: z.number().optional(),
-    }).optional(),
+    }).passthrough().optional(),
     transcodedSha256: z.string().optional(),
     transcodedInfo: z.object({
       duration: z.number().optional(),
       codec: z.string().optional(),
       format: z.string().optional(),
       channels: z.string().optional(),
-      metadata: z.object({
-        title: z.string().optional(),
-        artist: z.string().optional(),
-      }).optional(),
-    }).optional(),
-  }),
+    }).passthrough().optional(),
+  }).passthrough(),
 });
 
 // ============ Device Schemas ============
