@@ -107,7 +107,13 @@ async function uploadAndTranscode(
       };
     }
 
-    if (phase && phase !== "queued" && phase !== "processing" && phase !== "transcoding") {
+    if (
+      phase &&
+      phase !== "queued" &&
+      phase !== "processing" &&
+      phase !== "transcoding" &&
+      phase !== "analyzing"
+    ) {
       error(`Transcoding failed with status: ${phase}`);
       process.exit(1);
     }

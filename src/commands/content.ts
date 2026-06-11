@@ -518,7 +518,13 @@ async function uploadAndTranscode(
       };
     }
 
-    if (phase && phase !== "queued" && phase !== "processing" && phase !== "transcoding") {
+    if (
+      phase &&
+      phase !== "queued" &&
+      phase !== "processing" &&
+      phase !== "transcoding" &&
+      phase !== "analyzing"
+    ) {
       error(`Transcoding failed with status: ${phase}`);
       process.exit(1);
     }
@@ -597,7 +603,13 @@ export async function getTranscodeStatus(
         return;
       }
 
-      if (phase && phase !== "queued" && phase !== "processing") {
+      if (
+        phase &&
+        phase !== "queued" &&
+        phase !== "processing" &&
+        phase !== "transcoding" &&
+        phase !== "analyzing"
+      ) {
         error(`Transcoding failed with status: ${phase}`);
         process.exit(1);
       }
