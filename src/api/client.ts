@@ -1,6 +1,6 @@
 import { z } from "zod";
+import { createHash, randomBytes } from "crypto";
 import {
-  DeviceCodeResponseSchema,
   TokenResponseSchema,
   AuthErrorSchema,
   GetContentResponseSchema,
@@ -13,7 +13,6 @@ import {
   TranscodedAudioResponseSchema,
   GetDevicesResponseSchema,
   DeviceStatusSchema,
-  type DeviceCodeResponse,
   type TokenResponse,
   type GetContentResponse,
   type ListContentResponse,
@@ -32,10 +31,20 @@ import {
 const AUTH_BASE_URL = "https://login.yotoplay.com";
 const API_BASE_URL = "https://api.yotoplay.com";
 
+// Library read + Make-Your-Own content management (upload/create/edit) + a
+// refresh token. Enough for the CLI's content/icon/device commands.
+const DEFAULT_SCOPE = "offline_access family:library:view user:content:manage";
+
 export interface YotoClientConfig {
   clientId: string;
   accessToken?: string;
   refreshToken?: string;
+}
+
+export interface PKCECodes {
+  verifier: string;
+  challenge: string;
+  state: string;
 }
 
 export class YotoClient {
@@ -62,17 +71,61 @@ export class YotoClient {
   }
 
   // ============ Authentication ============
+  //
+  // Yoto has deprecated the OAuth device_code grant. We use the Authorization
+  // Code flow with PKCE over a loopback redirect (OAuth 2.1's recommendation for
+  // native/CLI apps). Callers create a PKCE pair, open the authorize URL in a
+  // browser, catch the redirect on a local loopback server, then exchange the
+  // code for tokens.
 
-  async initDeviceFlow(): Promise<DeviceCodeResponse> {
-    const response = await fetch(`${AUTH_BASE_URL}/oauth/device/code`, {
+  static generatePKCE(): PKCECodes {
+    const base64url = (buf: Buffer) =>
+      buf
+        .toString("base64")
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=+$/, "");
+    const verifier = base64url(randomBytes(32));
+    const challenge = base64url(createHash("sha256").update(verifier).digest());
+    const state = base64url(randomBytes(16));
+    return { verifier, challenge, state };
+  }
+
+  buildAuthorizeUrl(options: {
+    redirectUri: string;
+    codeChallenge: string;
+    state: string;
+    scope?: string;
+  }): string {
+    const params = new URLSearchParams({
+      response_type: "code",
+      client_id: this.clientId,
+      redirect_uri: options.redirectUri,
+      scope: options.scope ?? DEFAULT_SCOPE,
+      audience: "https://api.yotoplay.com",
+      code_challenge: options.codeChallenge,
+      code_challenge_method: "S256",
+      state: options.state,
+    });
+    return `${AUTH_BASE_URL}/authorize?${params.toString()}`;
+  }
+
+  async exchangeCodeForToken(options: {
+    code: string;
+    codeVerifier: string;
+    redirectUri: string;
+  }): Promise<TokenResponse> {
+    const response = await fetch(`${AUTH_BASE_URL}/oauth/token`, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
       },
       body: new URLSearchParams({
+        grant_type: "authorization_code",
         client_id: this.clientId,
-        scope: "profile offline_access openid",
-        audience: "https://api.yotoplay.com",
+        code: options.code,
+        code_verifier: options.codeVerifier,
+        redirect_uri: options.redirectUri,
       }),
     });
 
@@ -83,31 +136,8 @@ export class YotoClient {
       throw new Error(
         error.success
           ? error.data.error_description || error.data.error
-          : "Failed to init device flow"
+          : "Failed to exchange authorization code"
       );
-    }
-
-    return DeviceCodeResponseSchema.parse(data);
-  }
-
-  async pollForToken(deviceCode: string): Promise<TokenResponse> {
-    const response = await fetch(`${AUTH_BASE_URL}/oauth/token`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams({
-        client_id: this.clientId,
-        grant_type: "urn:ietf:params:oauth:grant-type:device_code",
-        device_code: deviceCode,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      const error = AuthErrorSchema.safeParse(data);
-      throw new Error(error.success ? error.data.error : "authorization_pending");
     }
 
     const tokens = TokenResponseSchema.parse(data);
