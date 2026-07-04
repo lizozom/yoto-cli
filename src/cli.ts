@@ -15,7 +15,7 @@ const program = new Command();
 program
   .name("yoto")
   .description("CLI for the Yoto API")
-  .version("0.2.0");
+  .version("0.3.0");
 
 registerAuthCommands(program);
 registerDeviceCommands(program);

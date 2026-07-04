@@ -2,7 +2,11 @@
 // Use these to interact with Yoto API programmatically
 
 // API Client
-export { YotoClient, type YotoClientConfig } from "./api/client.ts";
+export {
+  YotoClient,
+  type YotoClientConfig,
+  type PKCECodes,
+} from "./api/client.ts";
 
 // Schemas and types
 export * from "./api/schemas.ts";
@@ -13,6 +17,7 @@ export {
   logout,
   status,
   getAuthenticatedClient,
+  type LoginOptions,
 } from "./commands/auth.ts";
 
 // Content/Playlist functions

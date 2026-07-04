@@ -1,6 +1,6 @@
 {
   "name": "@lizozom/yoto",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "CLI and library for interacting with the Yoto API",
   "type": "module",
   "main": "./dist/lib/index.js",
