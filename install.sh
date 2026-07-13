@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-REPO="TheBestMoshe/yoto-cli"
+REPO="lizozom/yoto-cli"
 INSTALL_DIR="${YOTO_INSTALL_DIR:-$HOME/.local/bin}"
 
 # Detect OS
