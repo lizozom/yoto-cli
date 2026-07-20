@@ -3,14 +3,14 @@
   "version": "0.3.0",
   "description": "CLI and library for interacting with the Yoto API",
   "type": "module",
-  "main": "./dist/lib/index.js",
+  "main": "./dist/lib/index.cjs",
   "module": "./dist/lib/index.js",
   "types": "./dist/lib/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/lib/index.d.ts",
       "import": "./dist/lib/index.js",
-      "require": "./dist/lib/index.js",
-      "types": "./dist/lib/index.d.ts"
+      "require": "./dist/lib/index.cjs"
     }
   },
   "bin": {
@@ -24,7 +24,9 @@
     "dev": "bun run src/cli.ts",
     "build": "bun run build:cli && bun run build:lib",
     "build:cli": "bun build src/cli.ts --compile --outfile dist/yoto",
-    "build:lib": "bun build src/index.ts --outdir dist/lib --target node && tsc -p tsconfig.build.json",
+    "build:lib": "bun run build:lib:esm && bun run build:lib:cjs && tsc -p tsconfig.build.json",
+    "build:lib:esm": "bun build src/index.ts --outfile dist/lib/index.js --target node --format esm",
+    "build:lib:cjs": "bun build src/index.ts --outfile dist/lib/index.cjs --target node --format cjs",
     "build:linux-x64": "bun build src/cli.ts --compile --target=bun-linux-x64 --outfile dist/yoto-linux-x64",
     "build:linux-arm64": "bun build src/cli.ts --compile --target=bun-linux-arm64 --outfile dist/yoto-linux-arm64",
     "build:darwin-x64": "bun build src/cli.ts --compile --target=bun-darwin-x64 --outfile dist/yoto-darwin-x64",
