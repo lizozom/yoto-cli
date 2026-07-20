@@ -259,7 +259,8 @@ const playlists = await client.listContent();
 ```bash
 bun dev <command>        # Run without compiling
 bun run typecheck        # Type check
-bun run build            # Build binary
+bun run build            # Build the CLI + library bundles
+bun run build:all        # Build standalone per-platform binaries (for releases)
 ```
 
 ## Build from Source
@@ -271,4 +272,7 @@ bun install
 bun run build
 ```
 
-The compiled binary will be at `./dist/yoto`.
+This produces `./dist/cli.js` (the `yoto` command, runs on Node 18+) and the
+library bundles in `./dist/lib`. The standalone per-platform binaries that the
+install script downloads are built separately with `bun run build:all` — they
+are published as GitHub release assets, not shipped in the npm package.

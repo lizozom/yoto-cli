@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 
 import { Command } from "commander";
 import { registerAuthCommands } from "./cli/auth.ts";
@@ -9,13 +9,14 @@ import { registerTrackCommands } from "./cli/track.ts";
 import { registerIconCommands } from "./cli/icon.ts";
 import { registerDeviceCommands } from "./cli/devices.ts";
 import { error } from "./utils/output.ts";
+import pkg from "../package.json" with { type: "json" };
 
 const program = new Command();
 
 program
   .name("yoto")
   .description("CLI for the Yoto API")
-  .version("0.3.0");
+  .version(pkg.version);
 
 registerAuthCommands(program);
 registerDeviceCommands(program);
