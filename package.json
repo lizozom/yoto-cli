@@ -14,16 +14,16 @@
     }
   },
   "bin": {
-    "yoto": "./dist/yoto"
+    "yoto": "./dist/cli.js"
   },
   "files": [
-    "dist",
-    "src"
+    "dist/lib",
+    "dist/cli.js"
   ],
   "scripts": {
     "dev": "bun run src/cli.ts",
     "build": "bun run build:cli && bun run build:lib",
-    "build:cli": "bun build src/cli.ts --compile --outfile dist/yoto",
+    "build:cli": "bun build src/cli.ts --outfile dist/cli.js --target node --format esm",
     "build:lib": "bun run build:lib:esm && bun run build:lib:cjs && tsc -p tsconfig.build.json",
     "build:lib:esm": "bun build src/index.ts --outfile dist/lib/index.js --target node --format esm",
     "build:lib:cjs": "bun build src/index.ts --outfile dist/lib/index.cjs --target node --format cjs",

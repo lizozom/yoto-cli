@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] - 2026-07-20
+
+### Fixed
+
+- CommonJS consumers can now actually `require()` the package. The `exports`
+  map advertised a `require` condition but pointed it at `dist/lib/index.js`,
+  which is ESM, so CJS consumers hit `ERR_REQUIRE_ESM` on any Node without
+  `require(esm)` support (< 22.12). The build now emits a real CJS bundle
+  (`dist/lib/index.cjs`) alongside the ESM one, and `require` resolves to it.
+  `types` also moved first in the condition map, since Node and TypeScript
+  both take the first match.
+- The `yoto` command now works on macOS and Windows. `bin` pointed at a
+  Bun-compiled binary built for the host platform, so `npm install -g` on
+  anything but that platform installed a command that could not run.
+
+### Changed
+
+- `bin` is now a plain Node bundle (`dist/cli.js`) instead of a compiled
+  binary. This drops the npm tarball from 22.4 MB to 275 kB (63.3 MB to
+  1.7 MB unpacked) — the 59 MB binary was being shipped to every consumer,
+  including library-only ones.
+- Standalone per-platform binaries are still built by `bun run build:all` and
+  published as GitHub release assets (what `install.sh` downloads); they are
+  no longer included in the npm package.
+
 ## [0.2.2] - 2026-06-13
 
 ### Fixed
