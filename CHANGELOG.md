@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Dynamic icons survive a read. `display.iconUrl16x16` — the URL form of an
+  icon, where the player fetches the image rather than holding it — was not in
+  the display schema, and zod strips what it does not know. Writing one worked;
+  reading the card back through the client returned an empty display object, so
+  it looked as though the write had failed. Verified against a real card: the
+  API keeps the URL on a track and drops it on a chapter, without an error
+  either way.
+
 ## [0.3.2] - 2026-07-20
 
 ### Fixed

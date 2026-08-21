@@ -29,7 +29,20 @@ export const AuthErrorSchema = z.object({
 // ============ Content Schemas ============
 
 const DisplaySchema = z.object({
+  /** A `yoto:#<mediaId>` reference to an icon already on the account. */
   icon16x16: z.string().optional(),
+  /**
+   * A dynamic icon: a URL the player fetches, rather than an icon it holds.
+   *
+   * https://yoto.dev/icons/dynamic-icons/ — the endpoint must answer with a
+   * 16x16 RGBA PNG. Listed here because zod strips what it does not know, so
+   * without this a card written with a dynamic icon reads back with an empty
+   * display object and looks as though the write silently failed.
+   *
+   * Note the API accepts this on a track and drops it on a chapter, without
+   * complaining either way.
+   */
+  iconUrl16x16: z.string().optional(),
 }).nullable().optional();
 
 const TrackEventsSchema = z.object({
